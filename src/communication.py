@@ -1,65 +1,90 @@
 import zmq
 from threading import Thread
 import time
+import json
+from datetime import datetime
 
-RCV_TIMEOUT = 3000
+RCV_TIMEOUT = 2000
+
 
 class ZMQServer:
 
-    def __init__(self, port, peer_ports):
+    def __init__(self, port, peer_ports, server):
+        self.peer_ports = peer_ports
+
         self.context = zmq.Context()
-        self.sockets = self.init_sockets(peer_ports)
+        self.sockets = self.init_sockets()
 
         self.reply = self.context.socket(zmq.REP)
         self.reply.bind("tcp://*:%s" % port)
 
-    def init_sockets(self, peer_ports):
+        self.server = server
+
+    def init_sockets(self):
         """ Initialize separate ZMQ REQ sockets for each peer. """
+
         sockets = {}
 
-        for port in peer_ports:
+        for port in self.peer_ports:
             sockets[port] = self.context.socket(zmq.REQ)
-            sockets[port].connect("tcp://localhost:%s" % port)
             sockets[port].RCVTIMEO = RCV_TIMEOUT
+            sockets[port].connect("tcp://localhost:%s" % port)
 
         return sockets
 
     def send(self, port, msg):
         """ Sends msg to peer port with timeout and return reply. """
 
+        print(f"Sending to {port}", datetime.now())
+
         try:
-            self.sockets[port].send_string(msg)
-            reply = self.sockets[port].recv()
+            self.sockets[port].send_string(json.dumps(msg))
+            reply = json.loads(self.sockets[port].recv())
+            self.server.all_server(reply)
+            # TODO router here too
             print("Received reply from ", port, "[", msg, "]")
-        except:
+        except Exception as e:
+            print("Send failed to ", port)
+            print(f"Exception on send: {e}", datetime.now())
+
             self.sockets[port].close()
             self.sockets[port] = self.context.socket(zmq.REQ)
             self.sockets[port].RCVTIMEO = RCV_TIMEOUT
             self.sockets[port].connect("tcp://localhost:%s" % port)
             reply = "Send fail"
-            print("Send failed to ", port)
+
 
         return reply
 
     def broadcast(self, msg):
         """ Send msg to all other servers and collect replies. """
-        replies = None
+
+        replies = {}
+
+        for peer in self.peer_ports:
+            replies[peer] = self.send(peer, msg)
+
         return replies
 
     def receive(self, port):
         """ Start receiver server in thread. """
-        Thread(target=self.receiver, args=[port]).start()
 
-    def receiver(self, port):
+        Thread(target=self.receiver).start()
+
+    def receiver(self):
         """ Receiver server. """
 
         try:
             while True:
                 msg = self.reply.recv()
-                print("Received request: ", msg)
-                time.sleep(1)
-                self.reply.send_string("World from %s" % port)
+                print("Received msg", datetime.now(), msg)
+
+                print("Finished all server", datetime.now())
+                reply_to_msg = self.server.router(json.loads(msg))
+
+                print("Reply to msg", datetime.now(), reply_to_msg)
+                self.reply.send_string(json.dumps(reply_to_msg))
+                print("Send reply back", datetime.now())
         except:
             self.reply.close()
-            self.reply.term()
             self.context.destroy()
