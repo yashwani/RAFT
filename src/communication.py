@@ -4,7 +4,7 @@ import time
 import json
 from datetime import datetime
 
-RCV_TIMEOUT = 2000
+RCV_TIMEOUT = 1000
 
 
 class ZMQServer:
@@ -35,14 +35,12 @@ class ZMQServer:
     def send(self, port, msg):
         """ Sends msg to peer port with timeout and return reply. """
 
-        print(f"Sending to {port}", datetime.now())
 
         try:
             self.sockets[port].send_string(json.dumps(msg))
             reply = json.loads(self.sockets[port].recv())
             self.server.all_server(reply)
             # TODO router here too
-            print("Received reply from ", port, "[", msg, "]")
         except Exception as e:
             print("Send failed to ", port)
             print(f"Exception on send: {e}", datetime.now())
@@ -58,6 +56,8 @@ class ZMQServer:
 
     def broadcast(self, msg):
         """ Send msg to all other servers and collect replies. """
+
+        print("Broadcasting", msg)
 
         replies = {}
 
@@ -77,14 +77,9 @@ class ZMQServer:
         try:
             while True:
                 msg = self.reply.recv()
-                print("Received msg", datetime.now(), msg)
-
-                print("Finished all server", datetime.now())
                 reply_to_msg = self.server.router(json.loads(msg))
 
-                print("Reply to msg", datetime.now(), reply_to_msg)
                 self.reply.send_string(json.dumps(reply_to_msg))
-                print("Send reply back", datetime.now())
         except:
             self.reply.close()
             self.context.destroy()

@@ -4,10 +4,11 @@ from threading import Timer
 
 # https://stackoverflow.com/a/56169014
 class ResettableTimer:
-    def __init__(self, function, interval_lb=100, interval_ub=200):
+    def __init__(self, function, interval_lb=100, interval_ub=200, args=None):
         self.interval = (interval_lb, interval_ub)
         self.function = function
-        self.timer = Timer(self._interval(), self.function)
+        self.timer = Timer(self._interval(), self.function, args=args)
+        self.args = args
 
     def _interval(self):
         # in millis
@@ -21,5 +22,8 @@ class ResettableTimer:
             self.timer.cancel()
         except:
             pass
-        self.timer = Timer(self._interval(), self.function)
+        self.timer = Timer(self._interval(), self.function, args=self.args)
         self.timer.start()
+
+    def cancel(self):
+        self.timer.cancel()

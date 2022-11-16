@@ -8,7 +8,7 @@ from server import *
 def start_server():
     external_port, internal_port, node_id, peer_ports, id_lookup = parse_config()
 
-    server = Server(internal_port)
+    server = Server(internal_port, len(peer_ports) + 1)
 
     zmqserver = ZMQServer(internal_port, peer_ports, server)
 
