@@ -3,18 +3,33 @@ import sys
 import time
 from communication import ZMQServer
 from server import *
+import send
+import zmq
 
+"""
+
+server - control logic
+zmq server - receiver thread and sending 
+state - state
+
+
+
+"""
 
 def start_server():
-    external_port, internal_port, node_id, peer_ports, id_lookup = parse_config()
+    external_port, internal_port, node_id, peers, id_lookup = parse_config()
 
-    server = Server(internal_port, len(peer_ports) + 1)
+    server = Server(internal_port, len(peers) + 1)
 
-    zmqserver = ZMQServer(internal_port, peer_ports, server)
+    context = zmq.Context()
 
-    server.init_rpc(zmqserver.send, zmqserver.broadcast)
+    zmqserver = ZMQServer(internal_port, peers, server, context)
 
-    zmqserver.receive(internal_port)
+    sender = send.Sender(context, peers, server)
+
+    server.init_rpc(sender.send, sender.broadcast)
+
+    zmqserver.receive()
 
     while True:
         time.sleep(0.1)

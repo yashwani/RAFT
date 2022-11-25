@@ -5,6 +5,7 @@ from const import *
 from timer import *
 from datetime import datetime
 from threading import Thread
+import send
 
 
 class Server:
@@ -16,6 +17,7 @@ class Server:
         self.state = State(internal_port)
         self.election_timer = ResettableTimer(self.to_candidate, 5000, 7000)
         self.to_follower()
+
 
     def init_rpc(self, send, broadcast):
         self.send = send
@@ -35,6 +37,7 @@ class Server:
             print("inside if statement")
 
             self.state.current_term = msg["term"]
+            self.state.voted_for = None
             self.to_follower()
 
     def to_follower(self):

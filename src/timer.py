@@ -20,7 +20,8 @@ class ResettableTimer:
     def reset(self):
         try:
             self.timer.cancel()
-        except:
+        except Exception as e:
+            print("timer exception", e)
             pass
         self.timer = Timer(self._interval(), self.function, args=self.args)
         self.timer.start()
