@@ -1,8 +1,8 @@
 import json
 import sys
 import time
-from communication import ZMQServer
-from server import *
+from server import Server
+from controller import *
 import send
 import zmq
 
@@ -19,17 +19,15 @@ state - state
 def start_server():
     external_port, internal_port, node_id, peers, id_lookup = parse_config()
 
-    server = Server(internal_port, len(peers) + 1)
+    controller = Controller(internal_port, len(peers) + 1)
 
     context = zmq.Context()
 
-    zmqserver = ZMQServer(internal_port, peers, server, context)
+    Server(internal_port, controller, context).recieve()
 
-    sender = send.Sender(context, peers, server)
+    sender = send.Sender(context, peers, controller)
 
-    server.init_rpc(sender.send, sender.broadcast)
-
-    zmqserver.receive()
+    controller.init_rpc(sender.send, sender.broadcast)
 
     while True:
         time.sleep(0.1)
