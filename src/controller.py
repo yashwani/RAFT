@@ -1,36 +1,23 @@
 import time
-
-from state import State
-from const import *
+import const
 from timer import *
 from datetime import datetime
 from threading import Thread
-import send
 
 
 class Controller:
-    def __init__(self, internal_port, size):
+    def __init__(self, internal_port, size, state):
         self.internal_port = internal_port
 
         self.size = size
 
-        self.state = State(internal_port)
+        self.state = state
         self.election_timer = ResettableTimer(self.to_candidate, 5000, 7000)
         self.to_follower()
-
 
     def init_rpc(self, send, broadcast):
         self.send = send
         self.broadcast = broadcast
-
-    def router(self, msg):
-
-        self.all_server(msg)
-
-        if msg["type"] == REQUEST_VOTE:
-            return self.state.request_vote_resp(self.decide_vote(msg))
-        if msg["type"] == APPEND_ENTRIES_REQUEST:
-            return self.respond_append_entries(msg)
 
     def all_server(self, msg):
         if msg["term"] > self.state.current_term:
@@ -43,7 +30,7 @@ class Controller:
     def to_follower(self):
         print("TO FOLLOWER", datetime.now())
 
-        self.state.role = FOLLOWER
+        self.state.role = const.FOLLOWER
 
         self.election_timer.reset()
 
@@ -80,7 +67,6 @@ class Controller:
 
         return True
 
-
     def count_votes(self, replies):
         """ Returns True if wins election, False otherwise. """
 
@@ -88,7 +74,13 @@ class Controller:
             if "vote_granted" in reply:
                 self.votes += reply["vote_granted"]
 
-        return self.votes > self.size/2
+        return self.votes > self.size / 2
+
+    def respond_vote(self, msg):
+
+        grant = self.decide_vote(msg)
+
+        return self.state.request_vote_resp(grant)
 
     def respond_append_entries(self, msg):
 
@@ -98,17 +90,11 @@ class Controller:
 
         return self.state.append_entries_resp()
 
+
+
     def heartbeat_thread(self):
 
         while True:
-
-            time.sleep(HEARTBEAT_INTERVAL)
+            time.sleep(const.HEARTBEAT_INTERVAL)
 
             replies = self.broadcast(self.state.append_entries_req())
-
-
-
-
-
-
-

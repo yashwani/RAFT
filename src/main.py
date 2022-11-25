@@ -5,6 +5,8 @@ from server import Server
 from controller import *
 import send
 import zmq
+import state
+import router
 
 """
 
@@ -19,11 +21,11 @@ state - state
 def start_server():
     external_port, internal_port, node_id, peers, id_lookup = parse_config()
 
-    controller = Controller(internal_port, len(peers) + 1)
+    controller = Controller(internal_port, len(peers) + 1, state.State(internal_port))
 
     context = zmq.Context()
 
-    Server(internal_port, controller, context).recieve()
+    Server(internal_port, controller, context).recieve(router.Router(controller))
 
     sender = send.Sender(context, peers, controller)
 

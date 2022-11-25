@@ -13,18 +13,18 @@ class Server:
 
         self.controller = controller
 
-    def recieve(self):
+    def recieve(self, router):
         """ Starts a receiver server in a thread. """
 
-        Thread(target=self.receiver).start()
+        Thread(target=self.receiver, args=[router]).start()
 
-    def receiver(self):
+    def receiver(self, router):
         """ Receiver server. """
 
         try:
             while True:
                 msg = self.socket.recv()
-                reply_to_msg = self.controller.router(json.loads(msg))
+                reply_to_msg = router.route(json.loads(msg))
 
                 self.socket.send_string(json.dumps(reply_to_msg))
         except:
