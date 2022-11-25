@@ -8,6 +8,7 @@ class Router:
         self.controller = controller
 
     def route(self, msg):
+        """ Route messages to controller for further action. """
 
         self.controller.all_server(msg)
 

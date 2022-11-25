@@ -1,35 +1,28 @@
 import json
 import sys
-import time
 from server import Server
 from controller import *
 import send
 import zmq
 import state
 import router
+import message
 
-"""
-
-server - control logic
-zmq server - receiver thread and sending 
-state - state
-
-
-
-"""
 
 def start_server():
     external_port, internal_port, node_id, peers, id_lookup = parse_config()
 
-    controller = Controller(internal_port, len(peers) + 1, state.State(internal_port))
-
     context = zmq.Context()
 
+    sender = send.Sender(context, peers)
+
+    node_state = state.State(internal_port)
+
+    messages = message.Message(node_state)
+
+    controller = Controller(internal_port, len(peers) + 1, node_state, sender, messages)
+
     Server(internal_port, controller, context).recieve(router.Router(controller))
-
-    sender = send.Sender(context, peers, controller)
-
-    controller.init_rpc(sender.send, sender.broadcast)
 
     while True:
         time.sleep(0.1)
